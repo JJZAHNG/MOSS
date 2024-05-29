@@ -15,8 +15,8 @@ class VideoPlayerApp:
         self.screen_height = master.winfo_screenheight()
 
         # 计算窗口大小
-        self.window_width = int(self.screen_width * 8/10)
-        self.window_height = int(self.screen_height * 8/10)
+        self.window_width = int(self.screen_width * 8 / 10)
+        self.window_height = int(self.screen_height * 8 / 10)
 
         # 计算窗口居中位置
         self.window_x = (self.screen_width - self.window_width) // 2
@@ -32,14 +32,14 @@ class VideoPlayerApp:
 
         # 创建一个字典来存储视频文件的路径
         self.video_paths = self.load_video_paths()
-        
+
         if not self.video_paths:
             print("No video files found in directory:", self.video_dir)
             return
 
         # 加载默认视频
         self.load_video(self.current_emotion)
-        
+
         # 创建视频播放区域
         self.video_label = tk.Label(self.master)
         self.video_label.pack(fill=tk.BOTH, expand=tk.YES)
@@ -59,16 +59,15 @@ class VideoPlayerApp:
         return video_paths
 
     def load_video(self, emotion):
-        print("Loading video for emotion:", emotion)
+        print("Loading emotion:", emotion)
         self.video_path = self.video_paths.get(emotion, self.video_paths.get("normal"))
         if not self.video_path:
-            print("No video file found for emotion:", emotion)
+            print("No emotion found:", emotion)
             return
         self.video_cap = cv2.VideoCapture(self.video_path)
         self.fps = int(self.video_cap.get(cv2.CAP_PROP_FPS))
         self.video_width = int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.video_height = int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print("Loaded video:", self.video_path)
 
     def on_resize(self, event):
         # 更新窗口宽高
@@ -76,32 +75,49 @@ class VideoPlayerApp:
         self.window_height = event.height
 
     def play_video(self):
-        if not self.play_video_flag:
-            return
+        while self.play_video_flag:
+            if not self.emotion_queue.empty():
+                new_emotion = self.emotion_queue.get()
+                if new_emotion == "terminate":
+                    self.play_video_flag = False  # 设置标志为 False，退出播放线程
+                    self.master.destroy()
+                    return
+                elif new_emotion != self.current_emotion:
+                    self.current_emotion = new_emotion
+                    print(f"当前展示情绪：{self.current_emotion}")
+                    self.load_video(new_emotion)
 
-        if not self.emotion_queue.empty():
-            new_emotion = self.emotion_queue.get()
-            if new_emotion == "terminate":
-                self.play_video_flag = False  # 设置标志为 False，退出播放线程
-                self.master.destroy()
+            ret, frame = self.video_cap.read()
+            if ret:
+                # 调整视频尺寸以适应窗口
+                frame = cv2.resize(frame, (self.window_width, self.window_height))
+                # 将 OpenCV 图像转换为 Tkinter 图像
+                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                image = Image.fromarray(image)
+                photo = ImageTk.PhotoImage(image=image)
+                # 在 Label 上显示视频帧
+                self.video_label.configure(image=photo)
+                self.video_label.image = photo
+                # 继续播放下一帧
+                self.master.after(1000 // self.fps, self.play_video)
                 return
-
-        ret, frame = self.video_cap.read()
-        if ret:
-            # 调整视频尺寸以适应窗口
-            frame = cv2.resize(frame, (self.window_width, self.window_height))
-            # 将 OpenCV 图像转换为 Tkinter 图像
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image = Image.fromarray(image)
-            photo = ImageTk.PhotoImage(image=image)
-            # 在 Label 上显示视频帧
-            self.video_label.configure(image=photo)
-            self.video_label.image = photo
-            # 继续播放下一帧
-            self.master.after(1000 // self.fps, self.play_video)
-        else:
-            # 视频播放结束，释放资源
-            self.video_cap.release()
+            else:
+                # 视频播放结束，释放资源
+                self.video_cap.release()
+                # 检查情绪队列
+                if not self.emotion_queue.empty():
+                    new_emotion = self.emotion_queue.get()
+                    if new_emotion == "terminate":
+                        self.play_video_flag = False  # 设置标志为 False，退出播放线程
+                        self.master.destroy()
+                        return
+                    elif new_emotion != self.current_emotion:
+                        self.current_emotion = new_emotion
+                        print(f"当前展示情绪：{self.current_emotion}")
+                        self.load_video(new_emotion)
+                else:
+                    # 没有新情绪，继续播放当前视频
+                    self.load_video(self.current_emotion)
 
     def close_window(self):
         # 在窗口关闭时释放视频资源并发送终止信号到情绪队列
