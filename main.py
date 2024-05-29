@@ -13,11 +13,19 @@ def start_video_player(emotion_queue):
 if __name__ == "__main__":
     emotion_queue = Queue()
 
-    video_thread = threading.Thread(target=start_video_player, args=(emotion_queue,))
+    # 启动语音助手的线程
     voice_thread = threading.Thread(target=start_voice_assistant, args=(emotion_queue,))
-
-    video_thread.start()
     voice_thread.start()
 
-    video_thread.join()
+    # 在主线程中运行视频播放器
+    run_video_player(emotion_queue)
+
+    # 等待语音助手线程结束
     voice_thread.join()
+
+    # 在主线程中检查是否需要终止程序
+    if not emotion_queue.empty():
+        termination_signal = emotion_queue.get()
+        if termination_signal == "terminate":
+            print("Terminating the program...")
+            exit()
