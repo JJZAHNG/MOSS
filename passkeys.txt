@@ -1,0 +1,28 @@
+def __init__(self, emotion_queue):
+        pygame.init()
+        pygame.mixer.init()
+        API_KEY = 'sk-dJZ3i9tHJGdnmmWl9eD4962843C344468a75F1771aF8C47e'
+        API_BASE = "https://pro.aiskt.com/v1"
+        self.client = OpenAI(api_key=API_KEY, base_url=API_BASE)
+        # 校验
+        print('通行口令>>>' + self.client.api_key)
+        print('通行路径>>>' + str(self.client.base_url))
+
+        self.BASE_DIR = os.path.dirname(__file__)
+        self.MY_VOICE_DIR = os.path.join(self.BASE_DIR, 'MOSS_Voices', 'myvoices.mp3')
+        self.ROBOT_VOICE_DIR = os.path.join(self.BASE_DIR, 'MOSS_Voices', 'robotVoices.mp3')
+        self.INIT_VOICE_DIR = os.path.join(self.BASE_DIR, 'MOSS_Voices', 'init.mp3')
+        self.START_VOICE_DIR = os.path.join(self.BASE_DIR, 'MOSS_Voices', 'starting.mp3')
+        self.EXIT_VOICE_DIR = os.path.join(self.BASE_DIR, 'MOSS_Voices', 'exit.mp3')
+
+        # 百度 API 配置
+        self.APP_ID = '44890285'
+        self.API_KEY = 'uLQ2drxo052ABKjjBmzIG8rs'
+        self.SECRET_KEY = 'BSXkwTDERzDsjQVgzC21cEroeRHmCMMp'
+        self.bd_client = AipSpeech(self.APP_ID, self.API_KEY, self.SECRET_KEY)
+
+        self.messages = [
+            {"role": "system", "content": "You are a helpful assistant. And all your response should be in this way: RESPONSE: & EMOTION"}
+        ]
+
+        self.emotion_queue = emotion_queue
